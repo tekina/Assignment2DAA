@@ -32,16 +32,15 @@ public class DFS {
 	}
 
 	/**
-	 * populate the adjacency matrix with edges from file whose path is supplied as args0
+	 * populate the adjacency matrix with edges from file whose path is supplied
+	 * as args0
 	 */
 	void populateEdges(Scanner sc) {
-		do {
-			for (int i = 0; i < SIZE; i++) {
-				for (int j = 0; j < SIZE; j++) {
-					edge[i][j] = sc.nextInt();
-				}
+		for (int i = 0; i < SIZE; i++) {
+			for (int j = 0; j < SIZE; j++) {
+				edge[i][j] = sc.nextInt();
 			}
-		} while (true);
+		}
 	}
 
 	/**
