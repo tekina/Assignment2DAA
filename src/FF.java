@@ -1,5 +1,7 @@
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class FF {
@@ -11,8 +13,9 @@ public class FF {
 
 	int[] augPath = new int[SIZE];
 	int ctr;
-	int src;
-	int sink;
+	int src = 0;
+	int sink = 5;
+	int netFlow = 0;
 
 	public static void main(String[] args) {
 		File fin;
@@ -28,24 +31,36 @@ public class FF {
 			e.printStackTrace();
 		}
 
-		d1.printEdges();
-		d1.augmentPath();
-		d1.printDFS();
+		// d1.printEdges();
+		// d1.augmentPath();
+		int sent;
+		while ((sent = d1.send(d1.src, d1.sink, Integer.MAX_VALUE)) > 0) {
+			d1.netFlow += sent;
+			Arrays.fill(d1.isVisited, false);
+		}
+		d1.printMatrix();
 
 	}
 
 	/**
 	 * populate the adjacency matrix with edges from file whose path is supplied
-	 * as args0
+	 * to Scanner
 	 */
 	void populateEdges(Scanner sc) {
-		// TODO read src and sink values from input file
+		int from, to, cap;
 		src = 0;
-		sink = 5;
-		for (int i = 0; i < SIZE; i++) {
-			for (int j = 0; j < SIZE; j++) {
-				edge[i][j] = sc.nextInt();
+		SIZE = sc.nextInt();
+		sink = SIZE - 1;
+		sc.nextInt();
+		try {
+			while (true) {
+				from = sc.nextInt();
+				to = sc.nextInt();
+				cap = sc.nextInt();
+				edge[from-1][to-1] = cap;
 			}
+		} catch (Exception e) {
+			return;
 		}
 	}
 
@@ -61,94 +76,73 @@ public class FF {
 		}
 	}
 
-	void doDFS(int currNode) {
-		augPath[ctr] = currNode;
-		isVisited[currNode] = true;
-		ctr++;
-		for (int i = 0; i < SIZE; i++) {
-			if (edge[currNode][i] != 0 && !isVisited[i]) {
-				doDFS(i);
-			}
-		}
-	}
-
 	/**
-	 * The entry method used to find out an augmenting path from source to sink
+	 * Prints the flow matrix, residual graph matrix and original matrix
 	 */
-	void augmentPath() {
-		int nextNode = -1;
-		int bottleneck = 0;
-		augPath[ctr] = src;
-		ctr++;
-		while (true) {
-			for (int i = 1; i < SIZE; i++) {
-				if (edge[0][i] != 0) {
-					if (edge[0][i] > bottleneck) {
-						ctr = 1;
-						bottleneck = edge[0][i];
-						nextNode = i;
-					}
-				}
-			}
-			if (nextNode != -1) {
-				bottleneck = augmentPath(nextNode, bottleneck);
-				updateFlow(bottleneck);
-				nextNode = -1;
-			}
-			if (bottleneck == -1) { // no paths left
-				break;
-			}
-		}
-	}
-
-	int augmentPath(int currNode, int bottleneck) {
-		augPath[ctr] = currNode;
-		ctr++;
-		int flow = 0;
-		int nextNode = -1;
-		for (int i = 0; i < SIZE; i++) {
-			if (edge[currNode][i] != 0) {
-				if (edge[currNode][i] > flow)
-					flow = edge[currNode][i];
-					nextNode = i;
-			}
-		}
-		if(flow<bottleneck) bottleneck = flow;
-
-		if (nextNode == sink) { // reached sink
-			return bottleneck;
-		} else if (nextNode == -1) { // no path to sink
-			return -1;
-		} else
-			return bottleneck = augmentPath(nextNode, bottleneck);
-	}
-
-	void updateFlow(int flowVal) {
-		for(int i = 0; i<ctr;i++) {
-			flow[augPath[i]][augPath[i+1]] = flowVal;
-			edge[augPath[i]][augPath[i+1]] = edge[augPath[i]][augPath[i+1]] - flowVal;
-			edge[augPath[i+1]][augPath[i]] = flowVal;
-			}
-		for(int i= 0; i<SIZE; i++) {
-			for(int j= 0; j<SIZE; j++) {
-				System.out.print(flow[i][j] + " ");
-			}
-			System.out.println();
-		}
-		}
-		
-	
-	void printDFS() {
+	void printMatrix() {
 		for (int i = 0; i < SIZE; i++) {
 			System.out.println(augPath[i]);
 		}
 		System.out.println("Printing flow array");
-		
-		for(int i= 0; i<SIZE; i++) {
-			for(int j= 0; j<SIZE; j++) {
-				System.out.print(flow[i][j]);
+
+		for (int i = 0; i < SIZE; i++) {
+			for (int j = 0; j < SIZE; j++) {
+				System.out.print(flow[i][j] + " ");
 			}
 			System.out.println();
 		}
+
+		System.out.println("Printing Residual Graph");
+		for (int i = 0; i < SIZE; i++) {
+			for (int j = 0; j < SIZE; j++) {
+				System.out.print(edge[i][j] - flow[i][j] + " ");
+			}
+			System.out.println();
+		}
+
+		System.out.println("Printing original Graph");
+		for (int i = 0; i < SIZE; i++) {
+			for (int j = 0; j < SIZE; j++) {
+				System.out.print(edge[i][j] + " ");
+			}
+			System.out.println();
+		}
+
+		System.out.println("\nNet Flow = " + netFlow);
+
 	}
+
+	/**
+	 * Sends a flow of capacity 'minn' from node 'currNode' to 'toNode'
+	 * 
+	 * @param currNode
+	 * @param toNode
+	 * @param minn
+	 * @return
+	 */
+	int send(int currNode, int toNode, int minn) {
+		isVisited[currNode] = true;
+
+		if (currNode == toNode)
+			return minn;
+
+		for (int i = 1; i < SIZE; i++) {
+			int capacity = edge[currNode][i] - flow[currNode][i];
+			if (!isVisited[i] && edge[currNode][i] - flow[currNode][i] > 0) {
+				int sent = send(i, toNode, min(minn, capacity));
+
+				if (sent > 0) {
+					flow[currNode][i] += sent;
+					flow[i][currNode] -= sent;
+					return sent;
+				}
+			}
+		}
+		return 0;
+	}
+
+	int min(int a, int b) {
+		return a < b ? a : b;
+	}
+
 }
